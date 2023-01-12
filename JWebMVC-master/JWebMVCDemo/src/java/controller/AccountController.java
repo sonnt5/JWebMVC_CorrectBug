@@ -22,10 +22,7 @@ import org.w3c.dom.Attr;
  */
 public class AccountController extends BaseController{
 
-    @Override
-    protected void preProcessRequest() throws ServletException, IOException {
-    }
-    
+   
     @GET(action = "login")
     public void login() throws ServletException, IOException {
         forwardToView(null);

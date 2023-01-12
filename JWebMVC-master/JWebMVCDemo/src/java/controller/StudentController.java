@@ -9,8 +9,6 @@ import com.fpt.mvc.controller.GET;
 import com.fpt.mvc.controller.POST;
 import com.fpt.mvc.controller.PreProcessing;
 import com.fpt.mvc.controller.RequestParam;
-import java.io.IOException;
-import javax.servlet.ServletException;
 import model.Student;
 import model.StudentList;
 
@@ -21,10 +19,7 @@ import model.StudentList;
  */
 public class StudentController extends BaseRequiredLoginController {
 
-    @Override
-    protected void preProcessRequest() throws ServletException, IOException {
-    }
-    
+   
     @GET(action = "create")
     @PreProcessing(method = "checkLogin")
     public void create()

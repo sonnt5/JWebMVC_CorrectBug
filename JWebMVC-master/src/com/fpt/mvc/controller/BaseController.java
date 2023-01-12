@@ -35,7 +35,7 @@ public abstract class BaseController extends HttpServlet {
         request.setAttribute("isValidCall", new Object());
         this.request = request;
         this.response = response;
-        preProcessRequest();
+
         String currentAction = getAction();
 
         Method[] methods = this.getClass().getMethods();
@@ -45,59 +45,69 @@ public abstract class BaseController extends HttpServlet {
                 if (annotation.annotationType().equals(GET.class)
                         && method.equals("GET")) {
                     if (((GET) annotation).action().equals(currentAction)) {
-                        checkPreProcessingAction(met);
-                        met.setAccessible(true);
-                        Object[] params = requestMapping(met);
-                        met.invoke(this,params);
+                        boolean isEnded = checkPreProcessingAction(met);
+                        if (!isEnded) {
+                            met.setAccessible(true);
+                            Object[] params = requestMapping(met);
+                            met.invoke(this, params);
+                        }
                         return;
                     }
                 } else if (annotation.annotationType().equals(POST.class)
                         && method.equals("POST")) {
                     if (((POST) annotation).action().equals(currentAction)) {
-                        checkPreProcessingAction(met);
-                        met.setAccessible(true);
-                        Object[] params = requestMapping(met);
-                        met.invoke(this,params);
+                        boolean isEnded = checkPreProcessingAction(met);
+                        if (!isEnded) {
+                            met.setAccessible(true);
+                            Object[] params = requestMapping(met);
+                            met.invoke(this, params);
+                        }
                         return;
                     }
                 }
             }
         }
+
         throw new ServletException("Request is not valid");
     }
 
-    private Object[] requestMapping(Method met) throws ServletException
-    {
+    private Object[] requestMapping(Method met) throws ServletException {
         ArrayList<Object> params = new ArrayList<>();
-        
+
         ArrayList<String> paramNames = new ArrayList<>();
         Annotation[][] annotations = met.getParameterAnnotations();
         for (Annotation[] ann : annotations) {
-            if(ann.length >0)
-            {
+            if (ann.length > 0) {
                 Annotation realAnn = ann[0];
-                if(realAnn.annotationType().equals(RequestParam.class))
-                {
+                if (realAnn.annotationType().equals(RequestParam.class)) {
                     paramNames.add(((RequestParam) realAnn).attr());
                 }
             }
         }
-        
+
         Parameter[] parameters = met.getParameters();
-        for (int i=0;i< parameters.length;i++) {
+        for (int i = 0; i < parameters.length; i++) {
             Parameter p = parameters[i];
             String value = request.getParameter(paramNames.get(i));
-            params.add(convert(value,p.getType()));
-       }
+            params.add(convert(value, p.getType()));
+        }
         return params.toArray();
     }
+
+    private <O> O convert(Object input, Class<O> otype) {
+        return (O) input;
+    }
+
+    public static final boolean PROCESS_CONTINUE = false; 
+    public static final boolean PROCESS_END = true;
+    private boolean isPreActionEndedProcess;
     
-    private <O> O convert(Object input,Class<O> otype)
+    protected void endPreProcess(boolean value)
     {
-        return (O)input;
+        isPreActionEndedProcess = value;
     }
     
-    private void checkPreProcessingAction(Method met) {
+    private boolean checkPreProcessingAction(Method met) {
         try {
             Annotation[] annotations = met.getAnnotations();
             for (Annotation annotation : annotations) {
@@ -108,7 +118,9 @@ public abstract class BaseController extends HttpServlet {
                         if (involkedMethod.getName().equals(methodAttr)) {
                             involkedMethod.setAccessible(true);
                             involkedMethod.invoke(this);
-                            return;
+                            if (isPreActionEndedProcess) {
+                                return true;
+                            }
                         }
                     }
                 }
@@ -117,11 +129,8 @@ public abstract class BaseController extends HttpServlet {
         } catch (SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
             Logger.getLogger(BaseController.class.getName()).log(Level.SEVERE, null, ex);
         }
-
+        return false;
     }
-
-    protected abstract void preProcessRequest()
-            throws ServletException, IOException;
 
     public String getAction() {
         String[] parts = request.getRequestURI().split("/");
